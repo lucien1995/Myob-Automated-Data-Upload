@@ -1,0 +1,57 @@
+/* src/HomePage.css */
+
+.home-container {
+  text-align: center;
+  font-family: 'Arial', sans-serif;
+  margin: 30px auto;
+  padding: 20px;
+  border-radius: 10px;
+  background-image: linear-gradient(to right, #ff7e5f, #feb47b); /* 渐变背景 */
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2); /* 添加一些阴影效果 */
+  max-width: 500px; /* 设置一个最大宽度 */
+}
+
+.home-header h1 {
+  color: #4a4a4a; /* 深灰色 */
+  font-size: 2.5em;
+}
+
+.home-header h2 {
+  font-size: 1.5em;
+  color: #333; /* 深色 */
+  margin-bottom: 20px;
+}
+
+.home-header hr {
+  width: 80%;
+  border-color: #feb47b; /* 使用渐变色中的一种 */
+  opacity: 0.7; /* 添加透明度 */
+}
+
+.home-content button {
+  background-color: rgba(255, 255, 255, 0.8); /* 半透明白色背景 */
+  color: #4a4a4a; /* 深灰色字体 */
+  border: 1px solid #feb47b; /* 边框颜色匹配背景渐变 */
+  padding: 10px 20px;
+  border-radius: 20px; /* 圆角 */
+  font-size: 16px;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.3s ease; /* 过渡动画 */
+}
+
+.home-content button:hover {
+  background-color: #ff7e5f; /* 鼠标悬浮时的背景颜色 */
+}
+
+.home-content p {
+  font-size: 16px;
+  color: #333; /* 深色 */
+  margin-top: 20px;
+}
+
+.home-footer p {
+  margin-top: 30px;
+  font-size: 12px;
+  color: #4a4a4a; /* 深灰色 */
+}

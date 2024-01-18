@@ -1,11 +1,19 @@
-from flask import Flask, redirect, request
+from flask import Flask, redirect, request,send_from_directory
 import requests
 from urllib.parse import unquote  #用来URI解码
 from excel_to_json import excel_to_json
-
+import os
 import json
 
-app = Flask(__name__)
+app = Flask(__name__,static_folder='client/build')
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if path and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
 
 @app.route('/')
 def home():
@@ -175,8 +183,7 @@ def fetch_employees(access_token, company_file_guid):
                 "Customer": None,
                 "Notes": "Annual Leave Request for May",
                 "Entries": [
-                    {
-                        #"UID": "ba951c0c-dfd8-4a18-bf0c-21ac533129c7",
+                    {                        #"UID": "ba951c0c-dfd8-4a18-bf0c-21ac533129c7",
                         "Date": "2024-01-11T09:00:00",
                         "Hours": 8,
                         "Processed": False
