@@ -1,4 +1,4 @@
-from flask import Flask, redirect, request,send_from_directory
+from flask import Flask, redirect, request, send_from_directory, jsonify
 import requests
 from urllib.parse import unquote  #用来URI解码
 from excel_to_json import excel_to_json
@@ -83,32 +83,41 @@ def myob_callback():
     # 发送 GET 请求
     response_COMP = requests.get(url, headers=headers)
 
-    # 打印响应内容-全部公司
-    #return response_COMP.json()
+    #names_list = [{"Name": item["Name"]} for item in response_COMP]
 
+    # print COMP-Info
+    return response_COMP.json()
+    return jsonify(names_list)
+
+@app.route('/CompanyDetail', methods=['POST'])
+def company_detail():
+    data = request.json
+    selected_company = data['selectedCompany']
+    username = data['username']
+    password = data['password']
     # 要查找的名称
     target_name = "MYOB Shared Sandbox 15"
     company_file_guid = ""
-    CompanyFilesList = response_COMP.json()
+    #CompanyFilesList = response_COMP.json()
     # 遍历列表并查找目标名称
-    for item in CompanyFilesList:
-        if item["Name"] == target_name:
-            # 找到匹配项，处理或返回该项
-            print("找到匹配项:", item)
-            company_file_guid = "aecd5b98-3a05-4e2d-ac54-814d8d698952"  # 替换为您的公司文件GUID
-            print("\n\nRequest employees-info...")
-            print("\n...")
-            print("Employees details\n")
-            print(company_file_guid)
-            print(access_token)
-            break
+    #for item in CompanyFilesList:
+    #    if item["Name"] == target_name:
+    #        # 找到匹配项，处理或返回该项
+    #        print("找到匹配项:", item)
+    #        company_file_guid = "aecd5b98-3a05-4e2d-ac54-814d8d698952"  # 替换为您的公司文件GUID
+    #        print("\n\nRequest employees-info...")
+    #        print("\n...")
+    #        print("Employees details\n")
+    #        print(company_file_guid)
+    #        print(access_token)
+    #        break
             #return item
-    else:
-        print("没有找到匹配的公司项")
+    #else:
+    #    print("没有找到匹配的公司项")
 
     #查找公司下全部员工信息
 
-    return fetch_employees(access_token, company_file_guid)
+   # return fetch_employees(access_token, company_file_guid)
 
 
 def fetch_employees(access_token, company_file_guid):
