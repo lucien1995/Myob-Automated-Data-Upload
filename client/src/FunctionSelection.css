@@ -1,0 +1,67 @@
+.timesheet-upload-container {
+  text-align: center;
+  font-family: 'Arial', sans-serif;
+  color: #333;
+  background-color: #ffeedd; /* 柔和的桃色背景 */
+  max-width: 800px; /* 增加最大宽度 */
+  margin: 20px auto; /* 水平居中，增加上下间距 */
+  padding: 20px; /* 增加内边距 */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.5em;
+}
+
+.header
+{
+  background-color: #ff8e72;
+  color: white;
+  text-align: left;
+  padding: 25px;
+  border-radius: 8px 8px 0 0;
+  border-bottom: 4px solid #c17f4b;
+}
+
+.main-content {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 网格布局 */
+.button-grid {
+  display: grid;
+  margin-top: 20px;
+  grid-template-columns: repeat(2, 1fr); /* 双列布局 */
+  grid-column-gap: 130px; /* 按钮之间的间距 */
+  grid-row-gap: 30px; /* 按钮之间的间距 */
+  margin-bottom: 20px; /* 网格与其他元素之间的间距 */
+}
+
+.upload-button {
+  font-size: 1em;
+  padding: 20px 30px;
+  border: none;
+  border-radius: 10px;
+  background-color: #f9a07b; /* 柔和的橘色按钮 */
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.upload-button:hover {
+  background-color: #ffc4a3; /* 鼠标悬停时的颜色变化 */
+}
+
+.footer {
+  background-color: #f9a07b; /* 同步调整底部背景色 */
+  padding: 10px;
+  font-size: 0.8em;
+  text-align: right;
+}
+

@@ -1,0 +1,57 @@
+.upload-page-container {
+  width: 60%;
+  margin: 20px auto;
+  padding: 20px;
+  background-color:#feecde; /* Replace with your preferred background */
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.welcome-section h1,.welcome-section h2, .welcome-section hr {
+  text-align: left;
+}
+
+.dropzone {
+  border: 2px dashed #ccc;
+  border-radius: 4px;
+  padding: 20px;
+  text-align: center;
+  background-color: #f8f8f8;
+  margin-bottom: 20px;
+}
+
+.dropzone.active {
+  background-color: #e8e8e8;
+}
+
+.upload-button, .confirm-button {
+  display: block;
+  width: 100%;
+  padding: 10px 20px;
+  margin-bottom: 20px;
+  background-color: #ff7e5f; /* Replace with your preferred button color */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.upload-button:disabled, .confirm-button:disabled {
+  background-color: #ccc;
+}
+
+.preview-section {
+  border-top: 1px solid #ccc;
+  padding-top: 20px;
+}
+
+.preview-label {
+  font-weight: bold;
+}
+
+.preview-content {
+  border: 1px solid #ccc;
+  padding: 10px;
+  min-height: 100px; /* Adjust based on your content */
+  margin-bottom: 20px;
+}

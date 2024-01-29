@@ -1,9 +1,10 @@
 from flask import session
 from flask_session import Session
-
+import os
 def init_session(app):
     # 设置 Flask 的 SECRET_KEY
-    app.config['SECRET_KEY'] = 'your_secret_key'
+    app.secret_key = os.urandom(24)
+    app.config['SECRET_KEY'] = app.secret_key
     # 配置会话存储在服务器端的文件系统
     app.config['SESSION_TYPE'] = 'filesystem'
     app.config['SESSION_PERMANENT'] = False

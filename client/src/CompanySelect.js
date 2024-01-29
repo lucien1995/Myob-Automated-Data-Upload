@@ -1,6 +1,7 @@
 // src/CompanySelect.js
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './CompanySelect.css'; // 确保有对应的样式文件
 
 const CompanySelect = () => {
@@ -9,13 +10,14 @@ const CompanySelect = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  let navigate = useNavigate();
 
   useEffect(() => {
     const fetchCompanies = async () => {
       setIsLoading(true);
       try {
         //  Flask 路由来获取公司列表
-        const response = await fetch('/myob-callback');
+        const response = await fetch('/api/get-companies');
         const data = await response.json();
         setCompanies(data);
         setIsLoading(false);
@@ -32,12 +34,19 @@ const CompanySelect = () => {
   e.preventDefault();
   setIsLoading(true);
 
+  // 输入验证
+  if (!selectedCompany) {
+    alert("Please select a company.");
+    setIsLoading(false);
+    return;
+  }
+
   try {
     const response = await fetch('/CompanyDetail', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // 如果您使用 session 或 token，可能还需要添加授权头部
+        // 如果使用 session 或 token，需要添加授权头部
         // 'Authorization': 'Bearer YOUR_TOKEN_HERE',
       },
       body: JSON.stringify({
@@ -52,6 +61,7 @@ const CompanySelect = () => {
       // 处理成功响应
       console.log('Success:', data);
       // 可能的操作：跳转到详情页、显示成功信息等
+      navigate('/function-selection');
     } else {
       // 处理错误响应
       console.error('Login failed:', data);
@@ -66,7 +76,7 @@ const CompanySelect = () => {
 };
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div className="loader"></div>;
   }
 
   return (
