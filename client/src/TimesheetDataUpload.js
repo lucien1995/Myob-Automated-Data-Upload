@@ -38,7 +38,7 @@ const TimesheetDataUpload = () => {
 
      try {
     // 发送请求到后端上传接口
-    const response = await fetch('/timesheet-upload', {
+    const response = await fetch('/api/timesheet-upload', {
       method: 'POST',
       body: formData,
       // 不要设置 'Content-Type' 头，浏览器会自动设置

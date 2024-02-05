@@ -166,7 +166,7 @@ def company_detail():
 def get_payroll_data():
     access_token = get_session_data('user_data', {}).get('access_token')
     MYOB_Key = get_session_data('MYOB_Key')
-    Company_URI = get_session_data('comp_uri') + '/Payroll'
+    Company_URI = get_session_data('comp_uri') + '/Contact/EmployeeStandardPay'
     CF_Token = get_session_data('cf_token')
     headers_Company = {
             'Authorization': f'Bearer {access_token}',
@@ -177,13 +177,43 @@ def get_payroll_data():
             'Accept': 'application/json'
         }
     try:
-        response_payroll = requests.get(Company_URI, headers=headers_Company)
+        response_EmployeeStandardPay = requests.get(Company_URI, headers=headers_Company)
 
-        set_session_data('Payroll_List', response_payroll)
-        return jsonify({"status": "success", "message": "Payroll data fetched"}), 200
+        set_session_data('EmployeeStandardPay', response_EmployeeStandardPay)
+        return jsonify({"status": "success", "message": "Payroll Timesheet data fetched"}), 200
     except Exception as e:
         # 处理错误情况
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/timesheet-upload', methods=['POST'])
+def timesheet_upload():
+    # 检查是否有文件在请求中
+    if 'file' not in request.files:
+        return jsonify({'message': 'No file part'}), 400
+
+    file = request.files['file']
+
+    # 如果用户没有选择文件，浏览器也会提交一个空的文件部分
+    if file.filename == '':
+        return jsonify({'message': 'No selected file'}), 400
+
+    if file:
+        # 保存文件到服务器或处理文件
+        # 例如，使用 Pandas 读取 Excel 文件
+        # file.save(os.path.join('/path/to/save', file.filename))
+
+        # 或直接读取文件内容
+        excel_to_json(file,"E:\\aKaplan\\Academic Intership\\temp\\1.txt")
+        # 执行一些操作，例如数据解析
+        # ...
+
+
+
+        return jsonify({'message': 'File processed successfully'}), 200
+
+    return jsonify({'message': 'An error occurred'}), 500
+
 
 def fetch_employees(access_token, company_file_guid):
     """
