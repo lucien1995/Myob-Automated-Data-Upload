@@ -53,25 +53,40 @@ const TimesheetDataUpload = () => {
     // 获取后端返回的数据，可能包含文件处理结果
     const result = await response.json();
     console.log('Upload result:', result);
-    setPreviewData(result.previewData); // 假设后端返回了预览数据
-  } catch (error) {
-    console.error('Upload failed', error);
-  } finally {
+    setPreviewData(JSON.stringify(result, null, 2)); // 假设后端返回了预览数据
     setUploading(false); // 重置上传状态
-  }
-
-    // 模拟文件上传和处理
-    setTimeout(() => {
-      // 假设后端返回了预览数据
-      const mockPreviewData = 'Data from file'; // 替换为实际预览数据
-      setPreviewData(mockPreviewData);
-      setUploading(false); // 重置上传状态
-    }, 2000);
+    } catch (error) {
+        console.error('Upload failed', error);
+    } finally {
+        setUploading(false); // 重置上传状态
+    }
   };
 
-  const handleSubmitUpload = () => {
+  const handleSubmitUpload = async () => {
     console.log('Confirming Submitting...');
     // Here you would handle the final upload confirmation
+    try {
+        const response = await fetch('/api/confirm-upload', {
+            method: 'POST',
+            headers: {
+                // 如果需要的话，这里可以设置认证头部等
+            },
+            // body可以为空，或者包含一个简单的标识符，如session ID或用户ID等
+            // body: JSON.stringify({ sessionId: "你的会话ID或其他标识符" }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // 处理后端返回的结果，例如跳转到一个新页面或显示一个成功消息
+        const result = await response.json();
+        console.log('Confirm upload result:', result);
+        // 这里可以添加跳转或其他逻辑
+    } catch (error) {
+        console.error('Confirm upload failed', error);
+    }
+
   };
 
   // 渲染拖拽区域和上传按钮

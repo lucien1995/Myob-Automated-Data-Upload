@@ -6,6 +6,7 @@ from session_handler import init_session, set_session_data, get_session_data, cl
 import os
 import json
 import base64
+import uuid
 
 app = Flask(__name__, static_folder='client/build')
 # 使用 session_handler.py 中的函数初始化会话
@@ -156,6 +157,9 @@ def company_detail():
 
             set_session_data('comp_uri', company_file_uri)
             set_session_data('cf_token', base64_credentials)
+
+            #TODO： 加入申请公司文件的过程。
+
             return jsonify({"status": "success", "message": "Company details processed"}), 200
     except Exception as e:
         # 处理发生错误的情况
@@ -169,17 +173,29 @@ def get_payroll_data():
     Company_URI = get_session_data('comp_uri') + '/Contact/EmployeeStandardPay'
     CF_Token = get_session_data('cf_token')
     headers_Company = {
-            'Authorization': f'Bearer {access_token}',
-            'x-myobapi-cftoken': 'QVBJRGV2ZWxvcGVyOg==',
-            'x-myobapi-key': MYOB_Key,
-            'x-myobapi-version': 'v2',
-            #'Accept-Encoding': 'gzip,deflate'
-            'Accept': 'application/json'
-        }
+        'Authorization': f'Bearer {access_token}',
+        'x-myobapi-cftoken': 'QVBJRGV2ZWxvcGVyOg==',
+        'x-myobapi-key': MYOB_Key,
+        'x-myobapi-version': 'v2',
+        # 'Accept-Encoding': 'gzip,deflate'
+        'Accept': 'application/json'
+    }
     try:
         response_EmployeeStandardPay = requests.get(Company_URI, headers=headers_Company)
-
         set_session_data('EmployeeStandardPay', response_EmployeeStandardPay)
+
+        Company_URI = get_session_data('comp_uri') + '/Contact/Customer'
+        response_Customer = requests.get(Company_URI, headers=headers_Company)
+        set_session_data('Customer', response_Customer)
+
+        Company_URI = get_session_data('comp_uri') + '/GeneralLedger/Job'
+        response_Job = requests.get(Company_URI, headers=headers_Company)
+        set_session_data('Job', response_Job)
+
+        Company_URI = get_session_data('comp_uri') + '/TimeBilling/Activity'
+        response_Activity = requests.get(Company_URI, headers=headers_Company)
+        set_session_data('Activity', response_Activity)
+
         return jsonify({"status": "success", "message": "Payroll Timesheet data fetched"}), 200
     except Exception as e:
         # 处理错误情况
@@ -199,20 +215,130 @@ def timesheet_upload():
         return jsonify({'message': 'No selected file'}), 400
 
     if file:
-        # 保存文件到服务器或处理文件
-        # 例如，使用 Pandas 读取 Excel 文件
-        # file.save(os.path.join('/path/to/save', file.filename))
+        try:
+            # 保存文件到服务器或处理文件
+            # 例如，使用 Pandas 读取 Excel 文件
+            # file.save(os.path.join('/path/to/save', file.filename))
 
-        # 或直接读取文件内容
-        excel_to_json(file,"E:\\aKaplan\\Academic Intership\\temp\\1.txt")
-        # 执行一些操作，例如数据解析
-        # ...
+            # 或直接读取文件内容
+            excel_to_json(file, "E:\\aKaplan\\Academic Intership\\temp\\1.txt")
+            # 执行一些操作，例如数据解析
+            # ...
+            ##这里创建数据字典，减少session遍历次数，
+            ##构建后，开始生成上传数据用的json
+            final_data = get_session_data('Sessiondata_needEntry')
+            employee_standard_pay = get_session_data('EmployeeStandardPay')
+            job_data = get_session_data('Job')
+            activity_data = get_session_data('Activity')
+            customer_data = get_session_data('Customer')
+
+            # 转换为字典，便于快速查找
+            employee_dict = {emp['Name']: emp for emp in json.loads(employee_standard_pay)}
+            job_dict = {job['JobName']: job['UID'] for job in json.loads(job_data)}
+            activity_dict = {act['ActivityName']: act['UID'] for act in json.loads(activity_data)}
+            customer_dict = {cust['CustomerName']: cust['UID'] for cust in json.loads(customer_data)}
+
+            preview_upload = build_upload_payload(final_data, employee_dict, job_dict, activity_dict, customer_dict)
+            # 转换 upload_payloads 列表为JSON字符串
+            json_payload = json.dumps(preview_upload, indent=4)  # 使用indent参数美化输出，方便调试
+            set_session_data("data_waiting_upload", json_payload)
+
+            return jsonify(preview_upload), 200
+        except Exception as e:
+            return jsonify({'message': 'Error processing file', 'error': str(e)}), 500
+    else:
+        return jsonify({'message': 'An error occurred'}), 500
 
 
+# 现在已经可以正确获取文件数据，payroll categories 只需要继续完成jobactivity和customer，note的编写，就可以开始录入了，(如果要把产品升级至真实的日常工作水平。需要确定payroll categories，OT，OT>2 以及对应的activity，需要的不仅仅是UID还有工作时间的计算。)
+# 目前需要从文件中选出所有员工，然后搜索job，act之类的uid信息，
+# 然后就可以整型json开始录入。
+# 最后把内容显示在前端。
+# 打包成exe
+def build_upload_payload(final_data, employee_dict, job_dict, activity_dict, customer_dict):
+    # 假设 final_data 是一个字典，包含所有员工的记录
+    upload_payloads = []
 
-        return jsonify({'message': 'File processed successfully'}), 200
+    for name, categories in final_data.items():
 
-    return jsonify({'message': 'An error occurred'}), 500
+        # 构建每条记录的上传格式
+        new_record = {
+            "Employee": {
+                "UID": employee_dict[name]['UID'],  # 从employee_dict获取
+                "Name": name,
+                "DisplayID": employee_dict[name]['DisplayID'],
+                "URI": employee_dict[name]['URI']
+            },
+            "StartDate": record["StartDate"],
+            "EndDate": record["EndDate"],
+            "Lines": []
+        }
+
+        # 遍历该员工的所有工作记录
+        for category_key, records in categories.items():
+            for record in records:
+                # 在这里处理每一条工作记录
+                # 假设 find_payroll_category_uid 等函数已经定义
+                payroll_category_uid = find_payroll_category_uid(name, record["Pay- Category"], employee_dict)
+                job_uid = job_dict.get(record["Job No"], {}).get('UID', None)
+                activity_uid = activity_dict.get(record["Activity"], {}).get('UID', None)
+                customer_uid = customer_dict.get(record["Customer"], {}).get('UID', None)
+
+                # 构建 Lines 部分
+                new_line = {
+                    "PayrollCategory": {"UID": payroll_category_uid},
+                    "Job": {"UID": job_uid},
+                    "Activity": {"UID": activity_uid},
+                    "Customer": {"UID": customer_uid},
+                    "Notes": None,  # 假设 Notes 不从 record 中获取
+                    "Entries": [{
+                        "UID": generate_uid(),  # 假设有 generate_uid 函数生成唯一标识符
+                        "Date": record["Date"],
+                        "Hours": record["Total Hours Worked"],
+                        "Processed": False
+                    }]
+                }
+                new_record["Lines"].append(new_line)
+
+        upload_payloads.append(new_record)
+
+    return upload_payloads
+
+
+def generate_uid():
+    return str(uuid.uuid4())
+
+
+def find_payroll_category_uid(employee_name, category_name, employee_dict):
+    """
+    根据员工名和工资类别名称，找到对应的工资类别UID
+    """
+    emp_info = employee_dict.get(employee_name)
+    if not emp_info:
+        return None  # 员工信息不存在
+
+    # 遍历员工的PayrollCategories查找匹配的类别
+    for category in emp_info.get("PayrollCategories", []):
+        if category["Name"] == category_name:
+            return category["UID"]
+    return None  # 未找到匹配的类别
+
+
+@app.route('/api/confirm-upload', methods=['POST'])
+def timesheet_upload():
+    # TODO:现在遇到的问题是，MYOB上传timesheet只能一个人一个人的上传，因此需要在build_upload_payload这里将每个人的记录拆分开，并且建立一个字典，对应着员工UID和上传信息 然后在这里遍历信息，生成URI进行批量循环上传。
+    access_token = get_session_data('user_data', {}).get('access_token')
+    MYOB_Key = get_session_data('MYOB_Key')
+    Company_URI = get_session_data('comp_uri')
+    CF_Token = get_session_data('cf_token')
+    headers_Company = {
+        'Authorization': f'Bearer {access_token}',
+        'x-myobapi-cftoken': 'QVBJRGV2ZWxvcGVyOg==',
+        'x-myobapi-key': MYOB_Key,
+        'x-myobapi-version': 'v2',
+        'Accept-Encoding': 'gzip,deflate'
+        # 'Accept': 'application/json'
+    }
 
 
 def fetch_employees(access_token, company_file_guid):

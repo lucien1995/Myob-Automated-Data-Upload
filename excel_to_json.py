@@ -1,7 +1,8 @@
 # This is a sample Python script.
 import pandas as pd
 from session_handler import init_session, set_session_data, get_session_data, clear_session
-
+from collections import defaultdict
+import json
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
@@ -27,11 +28,67 @@ def excel_to_json(file, output_file):
     df['Date'] = df['Date'].dt.strftime('%d-%b-%Y').str.upper()
     # 处理“name”列中的姓名，将姓和名的位置互换
     df['Name'] = df['Name'].apply(swap_names)
+###########################################################################
+    # 初始化一个字典来存储整理后的数据
+    grouped_data = defaultdict(lambda: defaultdict(list))
+
+    # 遍历DataFrame中的每一行
+    for index, row in df.iterrows():
+        name = row['Name']
+        category = row['Pay- Category']
+        job_no = row['Job No']
+        activity = row['Activity']
+        customer = row['Customer']
+
+
+        # 构建二级分类的唯一标识符，确保相同的组合被归到一起
+        category_key = (category, job_no, activity, customer)
+
+        # 构建这个组合的数据记录
+        record = {
+            "Date": row["Date"],
+            "Start": row["Start"],
+            "End": row["End"],
+            "Total Hours Worked": row["Total Hours Worked"],
+            "Total Hours After MOT and LD": row["Total Hours After MOT and LD"],
+            "Base Rate": row["Base Rate"],
+            "Rate As per Day": row["Rate As per Day"],
+            "Consultant": row["Consultant"],
+            "OT Rate": row["OT Rate"],
+            "OT >2": row["OT >2"],
+            "Day": row["Day"],
+            "Activity WITHOUT TRIM": row["Activity WITHOUT TRIM"],
+            "Decuction - Lunch Break": row["Decuction - Lunch Break"],
+            "Morining OT Hours": row["Morining OT Hours"],
+            "Evening OT Hours": row["Evening OT Hours"],
+            "Total OT Test": row["Total OT Test"],
+            "Total OT": row["Total OT"],
+            "Base Hours No need": row["Base Hours No need"],
+            "Emp Base Hours": row["Emp Base Hours"],
+            " Emp OT Rate $": row[" Emp OT Rate $"],
+            "Base Rate $": row["Base Rate $"],
+            "Total Earnings": row["Total Earnings"],
+            # 可以继续添加其他需要的字段
+        }
+
+        # 将记录添加到正确的分类中
+        grouped_data[name][category_key].append(record)
+
+    # 转换为最终需要的格式
+    final_data = {
+        name: [{"Pay- Category": key[0], "Job No": key[1], "Activity": key[2], "Customer": key[3], "Records": records}
+               for key, records in categories.items()]
+        for name, categories in grouped_data.items()}
+
+    Sessiondata_needEntry = json.dumps(final_data)
+    set_session_data("Sessiondata_needEntry", Sessiondata_needEntry)
+    #####################################################################
 
     # 将DataFrame转换为JSON格式
     try:
         json_data = df.to_json(orient='records', force_ascii=False, lines=True)
         summarize_data(json_data)
+        set_session_data("Excel_data", json_data)
     except Exception as e:
         print(f"转换为JSON时出错：{e}")
         return
