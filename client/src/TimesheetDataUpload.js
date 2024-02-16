@@ -53,7 +53,7 @@ const TimesheetDataUpload = () => {
     // 获取后端返回的数据，可能包含文件处理结果
     const result = await response.json();
     console.log('Upload result:', result);
-    setPreviewData(JSON.stringify(result, null, 2)); // 假设后端返回了预览数据
+    setPreviewData(JSON.stringify(result, null, 2));
     setUploading(false); // 重置上传状态
     } catch (error) {
         console.error('Upload failed', error);

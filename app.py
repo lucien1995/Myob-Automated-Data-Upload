@@ -7,6 +7,8 @@ import os
 import json
 import base64
 import uuid
+from datetime import datetime, timedelta
+
 
 app = Flask(__name__, static_folder='client/build')
 # 使用 session_handler.py 中的函数初始化会话
@@ -158,7 +160,6 @@ def company_detail():
             set_session_data('comp_uri', company_file_uri)
             set_session_data('cf_token', base64_credentials)
 
-            #TODO： 加入申请公司文件的过程。
 
             return jsonify({"status": "success", "message": "Company details processed"}), 200
     except Exception as e:
@@ -258,6 +259,14 @@ def timesheet_upload():
 def build_upload_payload(final_data, employee_dict, job_dict, activity_dict, customer_dict):
     # 假设 final_data 是一个字典，包含所有员工的记录
     upload_payloads = []
+    # 获取第一个员工的名字和记录
+    first_employee_name, first_employee_categories = next(iter(final_data.items()))
+
+    # 获取第一个记录的第一个类别的第一条记录
+    first_category_key, first_records = next(iter(first_employee_categories.items()))
+    first_record = first_records[0]
+    start_date_iso, end_date_iso = get_week_range(first_record["Date"])
+    # 获取起始日期和结束日期
 
     for name, categories in final_data.items():
 
@@ -269,8 +278,8 @@ def build_upload_payload(final_data, employee_dict, job_dict, activity_dict, cus
                 "DisplayID": employee_dict[name]['DisplayID'],
                 "URI": employee_dict[name]['URI']
             },
-            "StartDate": record["StartDate"],
-            "EndDate": record["EndDate"],
+            "StartDate": start_date_iso,
+            "EndDate": end_date_iso,
             "Lines": []
         }
 
@@ -283,6 +292,7 @@ def build_upload_payload(final_data, employee_dict, job_dict, activity_dict, cus
                 job_uid = job_dict.get(record["Job No"], {}).get('UID', None)
                 activity_uid = activity_dict.get(record["Activity"], {}).get('UID', None)
                 customer_uid = customer_dict.get(record["Customer"], {}).get('UID', None)
+
 
                 # 构建 Lines 部分
                 new_line = {
@@ -300,7 +310,8 @@ def build_upload_payload(final_data, employee_dict, job_dict, activity_dict, cus
                 }
                 new_record["Lines"].append(new_line)
 
-        upload_payloads.append(new_record)
+        upload_payloads.append((employee_dict[name]['UID'], new_record))
+        set_session_data('upload_payloads',upload_payloads)
 
     return upload_payloads
 
@@ -323,6 +334,21 @@ def find_payroll_category_uid(employee_name, category_name, employee_dict):
             return category["UID"]
     return None  # 未找到匹配的类别
 
+def get_week_range(date_str):
+    # 将日期字符串解析为 datetime 对象
+    date = datetime.strptime(date_str, '%d-%b-%Y')
+
+    # 找到当前日期所在周的周一
+    start_of_week = date - timedelta(days=date.weekday())
+
+    # 找到当前日期所在周的周日
+    end_of_week = start_of_week + timedelta(days=6)
+
+    # 将日期格式化为 ISO 8601 格式
+    start_of_week_iso = start_of_week.strftime('%Y-%m-%dT00:00:00Z')
+    end_of_week_iso = end_of_week.strftime('%Y-%m-%dT23:59:59Z')
+
+    return start_of_week_iso, end_of_week_iso
 
 @app.route('/api/confirm-upload', methods=['POST'])
 def timesheet_upload():
@@ -336,132 +362,154 @@ def timesheet_upload():
         'x-myobapi-cftoken': 'QVBJRGV2ZWxvcGVyOg==',
         'x-myobapi-key': MYOB_Key,
         'x-myobapi-version': 'v2',
-        'Accept-Encoding': 'gzip,deflate'
-        # 'Accept': 'application/json'
-    }
-
-
-def fetch_employees(access_token, company_file_guid):
-    """
-    获取员工信息。
-
-    :param access_token: OAuth 2.0 访问令牌
-    :param company_file_guid: 公司文件的 GUID
-    :return: 员工信息的响应文本
-    """
-    # 构建 URL
-    # company_file_uri = f"https://api.myob.com/accountright/{company_file_guid}/Payroll/PayrollCategory"
-    # company_file_uri = f"https://api.myob.com/accountright/info"
-    # company_file_uri = f"https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/"
-    company_file_uri = f"https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Payroll/Timesheet"
-    # company_file_uri = f"https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Payroll/Timesheet/fd4d9cb3-2290-4351-89a7-2e984ce0590b?StartDate=2024-01-10T00:00:00&EndDate=2024-01-16T00:00:00"
-
-    # 设置请求头
-    headers_Company = {
-        'Authorization': f'Bearer {access_token}',
-        'x-myobapi-cftoken': 'QVBJRGV2ZWxvcGVyOg==',
-        'x-myobapi-key': 'dbb1f19c-a0ba-4a7d-84c3-42e9c0df9da7',
-        'x-myobapi-version': 'v2',
-        'Accept-Encoding': 'gzip,deflate'
-        # 'Accept': 'application/json'
-    }
-    print(headers_Company)
-    print(company_file_uri)
-
-    # 发送 GET 请求
-    response = requests.get(company_file_uri, headers=headers_Company)
-    print(response)
-    # return response.json()
-    # 返回响应文本
-
-    company_file_uri = f"https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Contact/Employee?$filter=DisplayID eq 'EMP00001'"
-    # company_file_uri = "https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Contact/EmployeePayrollDetails"
-    # company_file_uri = "https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Payroll/PayrollCategory"
-    # 设置请求头
-    headers_Company = {
-        'Authorization': f'Bearer {access_token}',
-        'x-myobapi-cftoken': 'QVBJRGV2ZWxvcGVyOg==',
-        'x-myobapi-key': 'dbb1f19c-a0ba-4a7d-84c3-42e9c0df9da7',
-        'x-myobapi-version': 'v2',
-        'Accept-Encoding': 'gzip,deflate'
-        # 'Accept': 'application/json'
-    }
-
-    # 发送 GET 请求
-    response = requests.get(company_file_uri, headers=headers_Company)
-    # return response.json()
-
-    url = "https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Payroll/Timesheet/fd4d9cb3-2290-4351-89a7-2e984ce0590b"
-    # url = "https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Contact/EmployeePayrollDetails"
-
-    payload = json.dumps({
-        "Employee": {
-            "UID": "fd4d9cb3-2290-4351-89a7-2e984ce0590b",
-            "Name": "Mary Jones",
-            "DisplayID": "EMP00001",
-            "URI": "https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Contact/Employee/fd4d9cb3-2290-4351-89a7-2e984ce0590b"
-        },
-        "StartDate": "2024-01-8T00:00:00Z",
-        "EndDate": "2024-01-14T00:00:00Z",
-        "Lines": [
-            {
-                "PayrollCategory": {
-                    "UID": "abc070f6-fa2b-4d5d-815e-ca1c96f42f7e"
-                },
-                "Job": None,
-                "Activity": None,
-                "Customer": None,
-                "Notes": "Annual Leave Request for May",
-                "Entries": [
-                    {  # "UID": "ba951c0c-dfd8-4a18-bf0c-21ac533129c7",
-                        "Date": "2024-01-11T09:00:00",
-                        "Hours": 8,
-                        "Processed": False
-                    },
-                    {
-                        # "UID": "2968fb34-7ac9-45af-81c9-140468467c0f",
-                        "Date": "2024-01-12T09:00:00",
-                        "Hours": 8,
-                        "Processed": False
-                    },
-                    {
-                        # "UID": "d019be73-9e74-4efb-be00-2286bc639c1d",
-                        "Date": "2024-01-13T09:00:00",
-                        "Hours": 7.6,
-                        "Processed": False
-                    }
-                ]
-            }
-        ]
-    })
-    headers = {
-        'Authorization': f'Bearer {access_token}',
-        'x-myobapi-cftoken': 'QVBJRGV2ZWxvcGVyOg==',
-        'x-myobapi-key': 'dbb1f19c-a0ba-4a7d-84c3-42e9c0df9da7',
-        'x-myobapi-version': 'v2',
         'Accept-Encoding': 'gzip,deflate',
         'Content-Type': 'application/json'
     }
+    # 获取上传数据
+    upload_payloads = get_session_data('upload_payloads')
 
-    response = requests.request("PUT", url, headers=headers, data=payload)
-    a = response.text
-    print(a)
-    print("写入成功")
+    # 遍历上传数据
+    for employee_uid, payload in upload_payloads:
+        # 构建员工对应的 URI
+        uri = f"{Company_URI}/Payroll/Timesheet/{employee_uid}"
 
-    company_file_uri = f"https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Payroll/Timesheet"
-    headers_Company = {
-        'Authorization': f'Bearer {access_token}',
-        'x-myobapi-cftoken': 'QVBJRGV2ZWxvcGVyOg==',
-        'x-myobapi-key': 'dbb1f19c-a0ba-4a7d-84c3-42e9c0df9da7',
-        'x-myobapi-version': 'v2',
-        'Accept-Encoding': 'gzip,deflate'
-        # 'Accept': 'application/json'
-    }
-    # 发送 GET 请求
-    response = requests.get(company_file_uri, headers=headers_Company)
-    print(response)
-    return response.json()
-    # return "写入成功"
+        # 将 payload 转换为 JSON 格式
+        json_payload = json.dumps(payload)
+
+        # 发送请求上传数据
+        response = requests.put(uri, headers=headers_Company, data=json_payload)
+
+        # 检查响应状态码
+        if response.ok:
+            print(f"Data for employee with UID {employee_uid} uploaded successfully.")
+        else:
+            print(f"Failed to upload data for employee with UID {employee_uid}. Status code: {response.status_code}")
+
+    # 根据需要返回响应
+    return jsonify({'message': 'Upload completed successfully'}), 200
+
+#
+# def fetch_employees(access_token, company_file_guid):
+#     """
+#     获取员工信息。
+#
+#     :param access_token: OAuth 2.0 访问令牌
+#     :param company_file_guid: 公司文件的 GUID
+#     :return: 员工信息的响应文本
+#     """
+#     # 构建 URL
+#     # company_file_uri = f"https://api.myob.com/accountright/{company_file_guid}/Payroll/PayrollCategory"
+#     # company_file_uri = f"https://api.myob.com/accountright/info"
+#     # company_file_uri = f"https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/"
+#     company_file_uri = f"https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Payroll/Timesheet"
+#     # company_file_uri = f"https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Payroll/Timesheet/fd4d9cb3-2290-4351-89a7-2e984ce0590b?StartDate=2024-01-10T00:00:00&EndDate=2024-01-16T00:00:00"
+#
+#     # 设置请求头
+#     headers_Company = {
+#         'Authorization': f'Bearer {access_token}',
+#         'x-myobapi-cftoken': 'QVBJRGV2ZWxvcGVyOg==',
+#         'x-myobapi-key': 'dbb1f19c-a0ba-4a7d-84c3-42e9c0df9da7',
+#         'x-myobapi-version': 'v2',
+#         'Accept-Encoding': 'gzip,deflate'
+#         # 'Accept': 'application/json'
+#     }
+#     print(headers_Company)
+#     print(company_file_uri)
+#
+#     # 发送 GET 请求
+#     response = requests.get(company_file_uri, headers=headers_Company)
+#     print(response)
+#     # return response.json()
+#     # 返回响应文本
+#
+#     company_file_uri = f"https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Contact/Employee?$filter=DisplayID eq 'EMP00001'"
+#     # company_file_uri = "https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Contact/EmployeePayrollDetails"
+#     # company_file_uri = "https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Payroll/PayrollCategory"
+#     # 设置请求头
+#     headers_Company = {
+#         'Authorization': f'Bearer {access_token}',
+#         'x-myobapi-cftoken': 'QVBJRGV2ZWxvcGVyOg==',
+#         'x-myobapi-key': 'dbb1f19c-a0ba-4a7d-84c3-42e9c0df9da7',
+#         'x-myobapi-version': 'v2',
+#         'Accept-Encoding': 'gzip,deflate'
+#         # 'Accept': 'application/json'
+#     }
+#
+#     # 发送 GET 请求
+#     response = requests.get(company_file_uri, headers=headers_Company)
+#     # return response.json()
+#
+#     url = "https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Payroll/Timesheet/fd4d9cb3-2290-4351-89a7-2e984ce0590b"
+#     # url = "https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Contact/EmployeePayrollDetails"
+#
+#     payload = json.dumps({
+#         "Employee": {
+#             "UID": "fd4d9cb3-2290-4351-89a7-2e984ce0590b",
+#             "Name": "Mary Jones",
+#             "DisplayID": "EMP00001",
+#             "URI": "https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Contact/Employee/fd4d9cb3-2290-4351-89a7-2e984ce0590b"
+#         },
+#         "StartDate": "2024-01-8T00:00:00Z",
+#         "EndDate": "2024-01-14T00:00:00Z",
+#         "Lines": [
+#             {
+#                 "PayrollCategory": {
+#                     "UID": "abc070f6-fa2b-4d5d-815e-ca1c96f42f7e"
+#                 },
+#                 "Job": None,
+#                 "Activity": None,
+#                 "Customer": None,
+#                 "Notes": "Annual Leave Request for May",
+#                 "Entries": [
+#                     {  # "UID": "ba951c0c-dfd8-4a18-bf0c-21ac533129c7",
+#                         "Date": "2024-01-11T09:00:00",
+#                         "Hours": 8,
+#                         "Processed": False
+#                     },
+#                     {
+#                         # "UID": "2968fb34-7ac9-45af-81c9-140468467c0f",
+#                         "Date": "2024-01-12T09:00:00",
+#                         "Hours": 8,
+#                         "Processed": False
+#                     },
+#                     {
+#                         # "UID": "d019be73-9e74-4efb-be00-2286bc639c1d",
+#                         "Date": "2024-01-13T09:00:00",
+#                         "Hours": 7.6,
+#                         "Processed": False
+#                     }
+#                 ]
+#             }
+#         ]
+#     })
+#     headers = {
+#         'Authorization': f'Bearer {access_token}',
+#         'x-myobapi-cftoken': 'QVBJRGV2ZWxvcGVyOg==',
+#         'x-myobapi-key': 'dbb1f19c-a0ba-4a7d-84c3-42e9c0df9da7',
+#         'x-myobapi-version': 'v2',
+#         'Accept-Encoding': 'gzip,deflate',
+#         'Content-Type': 'application/json'
+#     }
+#
+#     response = requests.request("PUT", url, headers=headers, data=payload)
+#     a = response.text
+#     print(a)
+#     print("写入成功")
+#
+#     company_file_uri = f"https://arl2.api.myob.com/accountright/c086f5e8-c459-4a49-88b2-bf7a6c82213e/Payroll/Timesheet"
+#     headers_Company = {
+#         'Authorization': f'Bearer {access_token}',
+#         'x-myobapi-cftoken': 'QVBJRGV2ZWxvcGVyOg==',
+#         'x-myobapi-key': 'dbb1f19c-a0ba-4a7d-84c3-42e9c0df9da7',
+#         'x-myobapi-version': 'v2',
+#         'Accept-Encoding': 'gzip,deflate'
+#         # 'Accept': 'application/json'
+#     }
+#     # 发送 GET 请求
+#     response = requests.get(company_file_uri, headers=headers_Company)
+#     print(response)
+#     return response.json()
+#     # return "写入成功"
 
 
 # 读取数据
