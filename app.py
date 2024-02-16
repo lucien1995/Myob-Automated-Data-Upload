@@ -222,7 +222,7 @@ def timesheet_upload():
             # file.save(os.path.join('/path/to/save', file.filename))
 
             # 或直接读取文件内容
-            excel_to_json(file, "E:\\aKaplan\\Academic Intership\\temp\\1.txt")
+            excel_to_json(file)
             # 执行一些操作，例如数据解析
             # ...
             ##这里创建数据字典，减少session遍历次数，

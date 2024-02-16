@@ -12,7 +12,7 @@ def print_hi(name):
     print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
 
 
-def excel_to_json(file, output_file):
+def excel_to_json(file):
     pay_categories = set()
     customers = set()
     activities = set()
@@ -94,14 +94,6 @@ def excel_to_json(file, output_file):
         return
 
     # 将JSON数据写入文件
-    try:
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(json_data)
-    except Exception as e:
-        print(f"写入文件时出错：{e}")
-        return
-
-    print(f"数据已转换为JSON并保存在 {output_file}")
 
 
 # 处理“Notes”列中的姓名，将姓和名的位置互换
