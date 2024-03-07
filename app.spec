@@ -5,7 +5,7 @@ a = Analysis(
     ['app.py'],
     pathex=['D:\\\\Python\\\\lib\\\\site-packages'],
     binaries=[],
-    datas=[('E:\\\\aKaplan\\\\Academic Intership\\\\flaskProject\\\\client\\\\build', 'build')],
+    datas=[('E:\\\\aKaplan\\\\Academic Intership\\\\flaskProject\\\\client\\\\build', 'client\\build')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

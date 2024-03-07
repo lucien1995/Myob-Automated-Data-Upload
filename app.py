@@ -4,21 +4,49 @@ from urllib.parse import unquote  # 用来URI解码
 from excel_to_json import excel_to_json
 from session_handler import init_session, set_session_data, get_session_data, clear_session
 import os
+import sys
 import json
 import base64
 import uuid
 from datetime import datetime, timedelta
 
+## when form EXE, using this commend, D: path is your packages path
+# pyinstaller --onefile --paths "D:\\Python\\lib\\site-packages" --add-data "E:\\aKaplan\\Academic Intership\\flaskProject\\client\\build;client\build" app.py
 
-app = Flask(__name__, static_folder='client/build')
+app = Flask(__name__)
+
+if getattr(sys, 'frozen', False):
+    # 应用被打包
+    app_root = sys._MEIPASS  # PyInstaller 创建的临时目录
+else:
+    # 应用未被打包
+    app_root = os.path.dirname(os.path.abspath(__file__))
+
+app.static_folder = os.path.join(app_root, 'client', 'build')
+
 # 使用 session_handler.py 中的函数初始化会话
 init_session(app)
+
+
+# 特定的路由来提供 `client/build/static` 中的静态资源
+@app.route('/static/js/<path:filename>')
+def js_static(filename):
+    # 将路径从 `static` 映射到 `client/build/static`
+    js_dir = os.path.join(app.static_folder, 'static', 'js')
+    return send_from_directory(js_dir, filename)
+
+
+@app.route('/static/css/<path:filename>')
+def css_static(filename):
+    # 将路径从 `static` 映射到 `client/build/static`
+    css_dir = os.path.join(app.static_folder, 'static', 'css')
+    return send_from_directory(css_dir, filename)
 
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
-    if path and os.path.exists(os.path.join(app.static_folder, path)):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
         return send_from_directory(app.static_folder, path)
     else:
         return send_from_directory(app.static_folder, 'index.html')
@@ -160,7 +188,6 @@ def company_detail():
             set_session_data('comp_uri', company_file_uri)
             set_session_data('cf_token', base64_credentials)
 
-
             return jsonify({"status": "success", "message": "Company details processed"}), 200
     except Exception as e:
         # 处理发生错误的情况
@@ -293,7 +320,6 @@ def build_upload_payload(final_data, employee_dict, job_dict, activity_dict, cus
                 activity_uid = activity_dict.get(record["Activity"], {}).get('UID', None)
                 customer_uid = customer_dict.get(record["Customer"], {}).get('UID', None)
 
-
                 # 构建 Lines 部分
                 new_line = {
                     "PayrollCategory": {"UID": payroll_category_uid},
@@ -311,7 +337,7 @@ def build_upload_payload(final_data, employee_dict, job_dict, activity_dict, cus
                 new_record["Lines"].append(new_line)
 
         upload_payloads.append((employee_dict[name]['UID'], new_record))
-        set_session_data('upload_payloads',upload_payloads)
+        set_session_data('upload_payloads', upload_payloads)
 
     return upload_payloads
 
@@ -334,6 +360,7 @@ def find_payroll_category_uid(employee_name, category_name, employee_dict):
             return category["UID"]
     return None  # 未找到匹配的类别
 
+
 def get_week_range(date_str):
     # 将日期字符串解析为 datetime 对象
     date = datetime.strptime(date_str, '%d-%b-%Y')
@@ -350,8 +377,9 @@ def get_week_range(date_str):
 
     return start_of_week_iso, end_of_week_iso
 
+
 @app.route('/api/confirm-upload', methods=['POST'])
-def timesheet_upload():
+def confirm_upload():
     # TODO:现在遇到的问题是，MYOB上传timesheet只能一个人一个人的上传，因此需要在build_upload_payload这里将每个人的记录拆分开，并且建立一个字典，对应着员工UID和上传信息 然后在这里遍历信息，生成URI进行批量循环上传。
     access_token = get_session_data('user_data', {}).get('access_token')
     MYOB_Key = get_session_data('MYOB_Key')
@@ -386,7 +414,9 @@ def timesheet_upload():
             print(f"Failed to upload data for employee with UID {employee_uid}. Status code: {response.status_code}")
 
     # 根据需要返回响应
+    clear_session()
     return jsonify({'message': 'Upload completed successfully'}), 200
+
 
 #
 # def fetch_employees(access_token, company_file_guid):
@@ -518,4 +548,4 @@ def Enter_Data():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
